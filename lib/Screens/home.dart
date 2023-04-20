@@ -1,10 +1,15 @@
-// ignore_for_file: unused_field
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:todo_app/Model/todo.dart';
+import 'package:todo_app/Screens/login.dart';
 import 'package:todo_app/Widgets/todo_item.dart';
 import 'package:todo_app/constants/Colors.dart';
+import 'package:todo_app/services/auth_service.dart';
 import 'package:todo_app/services/todo_service.dart';
 
 class Home extends StatefulWidget {
@@ -19,16 +24,24 @@ class _HomeState extends State<Home> {
   final TodoService _todoService = TodoService();
   final todosList = ToDo.todoList();
   final _todoController = TextEditingController();
+  final user = FirebaseAuth.instance.currentUser;
 
-  List<ToDo> _findToDo = [];
-
-  @override
-  void initState() {
-    _findToDo = todosList;
-    super.initState();
-  }
+  AuthService authService = AuthService();
 
   final GlobalKey<ScaffoldState> _key = GlobalKey<ScaffoldState>();
+  File? image;
+  Future pickImage() async {
+    try {
+      final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+      final imageTemporary = File(image.path);
+      setState(() {
+        this.image = imageTemporary;
+      });
+    } on PlatformException catch (e) {
+      print('Failed to pick image: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,33 +72,45 @@ class _HomeState extends State<Home> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CircleAvatar(
-                      radius: 50,
-                      child: Image.asset(
-                        'lib/assets/images/avatar2.png',
-                      ),
+                    GestureDetector(
+                      onTap: () async {
+                        await pickImage();
+                      },
+                      child: image == null
+                          ? CircleAvatar(
+                              radius: 50,
+                              child: Image.asset(
+                                'lib/assets/images/avatar2.png',
+                              ),
+                            )
+                          : CircleAvatar(
+                              radius: 50,
+                              backgroundImage: FileImage(
+                                image!,
+                              ),
+                            ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                     Text(
-                      "Albin",
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      user!.email!.replaceAll('@gmail.com', '').toUpperCase(),
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 6,
                     ),
                     Text(
-                      "albin1331aj@gmail.com",
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      "${user!.email}",
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
               ),
               Container(
-                  padding: EdgeInsets.only(left: 20, bottom: 0),
+                  padding: const EdgeInsets.only(left: 20, bottom: 0),
                   height: 300,
                   width: double.infinity,
                   child: Column(
@@ -94,67 +119,103 @@ class _HomeState extends State<Home> {
                       children: [
                         TextButton.icon(
                             onPressed: (() {}),
-                            icon: Icon(
+                            icon: const Icon(
                               Icons.edit,
                               color: Colors.black,
                               size: 24,
                             ),
-                            label: Text(
+                            label: const Text(
                               "Change Username",
                               style:
                                   TextStyle(color: Colors.black, fontSize: 18),
                             )),
                         TextButton.icon(
                             onPressed: (() {}),
-                            icon: Icon(
+                            icon: const Icon(
                               Icons.privacy_tip,
                               color: Colors.black,
                               size: 24,
                             ),
-                            label: Text(
+                            label: const Text(
                               "Privacy",
                               style:
                                   TextStyle(color: Colors.black, fontSize: 18),
                             )),
                         TextButton.icon(
                             onPressed: (() {}),
-                            icon: Icon(
+                            icon: const Icon(
                               Icons.help,
                               color: Colors.black,
                               size: 24,
                             ),
-                            label: Text(
+                            label: const Text(
                               "Support",
                               style:
                                   TextStyle(color: Colors.black, fontSize: 18),
                             )),
                         TextButton.icon(
                             onPressed: (() {}),
-                            icon: Icon(
+                            icon: const Icon(
                               Icons.settings,
                               color: Colors.black,
                               size: 24,
                             ),
-                            label: Text(
+                            label: const Text(
                               "Settings",
                               style:
                                   TextStyle(color: Colors.black, fontSize: 18),
                             )),
-                        Divider(
+                        const Divider(
                           thickness: 2,
                         ),
-                        TextButton.icon(
-                            onPressed: (() {}),
-                            icon: Icon(
-                              Icons.logout,
-                              color: Colors.black,
-                              size: 24,
-                            ),
-                            label: Text(
-                              "Log out",
-                              style:
-                                  TextStyle(color: Colors.black, fontSize: 18),
-                            ))
+                        GestureDetector(
+                          // onTap: () async {
+                          //   await authService.signout();
+                          //   Navigator.of(context).pushAndRemoveUntil(
+                          //       MaterialPageRoute(
+                          //           builder: (context) => const LoginScreen()),
+                          //       (route) => false);
+                          // },
+                          child: TextButton.icon(
+                              onPressed: (() {
+                                showDialog(
+                                    context: context,
+                                    builder: ((context) => AlertDialog(
+                                          title: const Text("Logout"),
+                                          content: const Text(
+                                              "Are you sure want to logout?"),
+                                          actions: [
+                                            TextButton(
+                                                onPressed: (() {
+                                                  Navigator.of(context).pop();
+                                                }),
+                                                child: const Text("No")),
+                                            TextButton(
+                                                onPressed: (() async {
+                                                  await authService.signout();
+                                                  // ignore: use_build_context_synchronously
+                                                  Navigator.of(context)
+                                                      .pushAndRemoveUntil(
+                                                          MaterialPageRoute(
+                                                              builder: (context) =>
+                                                                  const LoginScreen()),
+                                                          (route) => false);
+                                                }),
+                                                child: const Text("Yes"))
+                                          ],
+                                        )));
+                              }),
+                              icon: const Icon(
+                                Icons.logout,
+                                color: Colors.black,
+                                size: 24,
+                              ),
+                              label: const Text(
+                                "Log out",
+                                style: TextStyle(
+                                    color: Colors.black, fontSize: 18),
+                              )),
+                        )
                       ]))
             ]),
           ),
@@ -165,89 +226,102 @@ class _HomeState extends State<Home> {
           body: Column(
             children: [
               Container(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    CircleAvatar(
-                      radius: 50,
-                      child: Image.asset(
-                        'lib/assets/images/avatar2.png',
-                      ),
-                    ),
-                    Text(
-                      "Hi, Albin",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
                 height: 180,
                 width: double.infinity,
                 color: tdBlue,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    GestureDetector(
+                      onTap: () async {
+                        await pickImage();
+                      },
+                      child: image == null
+                          ? CircleAvatar(
+                              radius: 50,
+                              child: Image.asset(
+                                'lib/assets/images/avatar2.png',
+                              ),
+                            )
+                          : CircleAvatar(
+                              radius: 50,
+                              backgroundImage: FileImage(
+                                image!,
+                              ),
+                            ),
+                    ),
+                    Text(
+                      "Hi, ${user!.email!.replaceAll('@gmail.com', '').toUpperCase()}",
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
               ),
               Stack(
                 children: [
                   Container(
-                    margin: EdgeInsets.only(left: 10, right: 10),
+                    margin: const EdgeInsets.only(left: 10, right: 10),
                     height: 450,
                     child: Column(
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: 8,
-                          ),
-                          child: Text(
-                            "To-Do List ",
-                            style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue[700]),
+                        Container(
+                          height: 60,
+                          width: double.infinity,
+                          color: tdBGcolor,
+                          child: Center(
+                            child: Text(
+                              "To-Do List ",
+                              style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[700]),
+                            ),
                           ),
                         ),
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: docs.length,
-                            itemBuilder: (context, i) {
-                              String id = docs[i].id;
-                              // DocumentReference docRef = todosRef.doc(docs[i].id);
-                              Map<String, dynamic> data =
-                                  docs[i].data() as Map<String, dynamic>;
-                              return ToDoItem(
-                                onDeleteItem: (value) {
-                                  showDialog(
-                                      context: context,
-                                      builder: ((context) => AlertDialog(
-                                            title: const Text("Are you sure ?"),
-                                            content: const Text(
-                                                "This todo will delete permenantly"),
-                                            actions: [
-                                              TextButton(
-                                                  onPressed: (() {
-                                                    Navigator.of(context).pop();
-                                                  }),
-                                                  child: const Text("Cancel")),
-                                              TextButton(
-                                                  onPressed: (() {
-                                                    // docRef.delete();
-                                                    _todoService.deleteTodo(id);
-                                                    Navigator.of(context).pop();
-                                                  }),
-                                                  child: const Text("Delete"))
-                                            ],
-                                          )));
-                                },
-                                onToDoChange: (isDone) {
-                                  // docRef.update({"isDone": value});
-                                  _todoService.updateTodo(id, isDone!);
-                                },
-                                todo: ToDo(
-                                  id: '1',
-                                  title: data['title'],
-                                  isDone: data['isDone'],
-                                ),
-                              );
-                            },
-                          ),
+                        ListView.builder(
+                          itemCount: docs.length,
+                          shrinkWrap: true,
+                          itemBuilder: (context, i) {
+                            String id = docs[i].id;
+                            // DocumentReference docRef = todosRef.doc(docs[i].id);
+                            Map<String, dynamic> data =
+                                docs[i].data() as Map<String, dynamic>;
+                            return ToDoItem(
+                              onDeleteItem: (value) {
+                                showDialog(
+                                    context: context,
+                                    builder: ((context) => AlertDialog(
+                                          title: const Text("Are you sure ?"),
+                                          content: const Text(
+                                              "This todo will delete permenantly"),
+                                          actions: [
+                                            TextButton(
+                                                onPressed: (() {
+                                                  Navigator.of(context).pop();
+                                                }),
+                                                child: const Text("Cancel")),
+                                            TextButton(
+                                                onPressed: (() {
+                                                  // docRef.delete();
+                                                  _todoService.deleteTodo(id);
+                                                  Navigator.of(context).pop();
+                                                }),
+                                                child: const Text("Delete"))
+                                          ],
+                                        )));
+                              },
+                              onToDoChange: (isDone) {
+                                // docRef.update({"isDone": value});
+                                _todoService.updateTodo(id, isDone!);
+                              },
+                              todo: ToDo(
+                                id: '1',
+                                title: data['title'],
+                                isDone: data['isDone'],
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -326,7 +400,7 @@ class _HomeState extends State<Home> {
           onPressed: (() {
             _key.currentState?.openDrawer();
           }),
-          icon: Icon(
+          icon: const Icon(
             Icons.menu,
             color: tdBlack,
             size: 30,

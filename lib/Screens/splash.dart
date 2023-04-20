@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:todo_app/Screens/home.dart';
+import 'package:todo_app/Screens/login.dart';
 import 'package:todo_app/constants/Colors.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -13,13 +14,21 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  bool _isSignedIn = false;
+
   @override
   void initState() {
-    Timer(const Duration(seconds: 50), () {
-      Navigator.of(context)
-          .pushReplacement(MaterialPageRoute(builder: ((context) => Home())));
-    });
     super.initState();
+    gotoHome();
+  }
+
+  gotoHome() async {
+    await Future.delayed(
+        const Duration(seconds: 3),
+        (() => Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (context) => _isSignedIn ? Home() : LoginScreen()))));
   }
 
   @override
@@ -31,7 +40,7 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             Lottie.network(
                 "https://assets7.lottiefiles.com/packages/lf20_p9e3k0ln.json"),
-            SizedBox(
+            const SizedBox(
               height: 20,
             ),
             Text.rich(
@@ -41,7 +50,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       fontSize: 50,
                       fontWeight: FontWeight.bold,
                       color: Colors.blue[800]),
-                  children: [
+                  children: const [
                     TextSpan(
                       text: "o",
                       style: TextStyle(
